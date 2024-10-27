@@ -1,17 +1,22 @@
-# インポート
 import sqlite3
 import os
-import numpy as np
-from utils.audio_processing import process_audio, mfcc_to_binary  # 特徴量抽出とバイナリ変換関数をインポート
-import librosa
+from utils.audio_processing import process_audio
 
-# データベースとテーブルを作成する関数
-def initialize_database():
-    conn = sqlite3.connect('cheer_songs.db')
-    cursor = conn.cursor()
+def get_lyrics(song_name):
+    lyrics_database = {
+        "song_1": "どんぐり ころころ どんぶりこ おいけにはまって さあたいへん どじょうがでてきて こんにちは ぼっちゃん いっしょに あそびましょう どんぐり ころころ よろこんで しばらくいっしょに あそんだが やっぱり おやまが こいしいと ないては どじょうを こまらせた",
+        "song_2": "秋の夕日に照る山紅葉 濃いも薄いも 数ある中に 松をいろどる楓や蔦は 山のふもとの裾模様 渓の流に散り浮く紅葉 波にゆられて 離れて寄って 赤や黄色の色さまざまに 水の上にも織る錦",
+        "song_3": "夕焼け 小焼けで 日が暮れて 山のお寺の 鐘が鳴る おててつないで みなかえろう からすと いっしょに かえりましょ 子供が かえった あとからは まるい大きな お月さま 小鳥が夢を 見るころは 空には きらきら 金の星"
+    }
+    return lyrics_database.get(song_name, "歌詞が見つかりませんでした")
 
-    # 曲情報と特徴量を格納するテーブルを作成
-    cursor.execute('''
+def setup_database():
+    db_path = 'songs.db'
+
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+
+    c.execute('''
         CREATE TABLE IF NOT EXISTS songs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -20,38 +25,44 @@ def initialize_database():
         )
     ''')
 
+    # 応援歌の音声ファイルが保存されているディレクトリ
+    songs_directory = '../data/'  # setup_db.py から見た data/ の相対パス
+
+    # ディレクトリが存在しない場合は作成
+    if not os.path.exists(songs_directory):
+        os.makedirs(songs_directory)
+        print(f"{songs_directory} ディレクトリを作成しました。")
+
+    # 音声ファイルの登録
+    for filename in os.listdir(songs_directory):
+        if filename.endswith('.mp3') or filename.endswith('.wav'):
+            song_path = os.path.join(songs_directory, filename)
+            song_name = os.path.splitext(filename)[0]  # ファイル名から拡張子を除いた部分を曲名とする
+            lyrics = get_lyrics(song_name)
+
+            # 曲名が既に存在する場合はスキップ
+            c.execute('SELECT * FROM songs WHERE name = ?', (song_name,))
+            if c.fetchone():
+                print(f"既に登録済みの曲名: {song_name}。スキップします。")
+                continue
+
+            # MFCC 特徴量の抽出
+            mfcc = process_audio(song_path)
+
+            # バイナリデータに変換
+            fingerprint = mfcc.tobytes()
+
+            # データベースに挿入
+            c.execute('''
+                INSERT INTO songs (name, lyrics, audio_path, mfcc)
+                VALUES (?, ?, ?, ?)
+            ''', (song_name, lyrics, song_path, fingerprint))
+            print(f"登録済み: {song_name}")
+
+    # 変更を保存して接続を閉じる
     conn.commit()
     conn.close()
-    print("データベースが初期化されました。")
+    print("データベースの初期化が完了しました。")
 
-# 曲をデータベースに追加する関数
-def add_song_to_db(song_name, lyrics, file_path):
-    conn = sqlite3.connect('cheer_songs.db')
-    cursor = conn.cursor()
-
-    # 音声ファイルから特徴量を抽出し、バイナリに変換
-    mfcc = process_audio(file_path)
-    mfcc_binary = mfcc_to_binary(mfcc)
-
-    # データベースに曲情報を挿入
-    cursor.execute('INSERT INTO songs (name, lyrics, mfcc) VALUES (?, ?, ?)',
-                   (song_name, lyrics, mfcc_binary))
-    
-    conn.commit()
-    conn.close()
-    print(f"曲 '{song_name}' がデータベースに追加されました。")
-
-# 複数の曲を一括で追加する関数
-def add_songs_bulk(songs_info):
-    initialize_database()
-    for song in songs_info:
-        add_song_to_db(song['name'], song['lyrics'], song['file_path'])
-
-# サンプルデータの挿入
-if __name__ == '__main__':
-    # ここで曲情報（名前、歌詞、ファイルパス）を定義
-    songs_info = [
-        {"name": "Cheer Song 1", "lyrics": "応援歌1の歌詞", "file_path": "path/to/song1.wav"},
-        {"name": "Cheer Song 2", "lyrics": "応援歌2の歌詞", "file_path": "path/to/song2.wav"},
-    ]
-    add_songs_bulk(songs_info)
+if __name__ == "__main__":
+    setup_database()

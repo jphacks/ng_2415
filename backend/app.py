@@ -6,6 +6,10 @@ import librosa
 import numpy as np 
 import sqlite3  
 from utils.audio_processing import process_audio, calculate_similarity  # audio_processing.pyから関数をインポートします
+import logging
+
+# ロギング設定
+logging.basicConfig(level=logging.INFO)  # ログレベルをINFOに設定します
 
 # フロントエンドからのリクエストの許可を行う
 app = Flask(__name__)  # Flaskアプリケーションを作成します
@@ -18,7 +22,7 @@ def get_db_connection():
     return conn  # データベース接続を返します
 
 # 応援歌識別エンドポイント
-@app.route('/upload', methods=['POST'])  # '/upload'へのPOSTリクエストを処理する関数を定義します
+@app.route('/api/audio', methods=['POST'])  # '/upload'へのPOSTリクエストを処理する関数を定義します
 def upload_audio():
     if 'file' not in request.files:  # リクエストにファイルが含まれているか確認します
         return jsonify({"error": "ファイルが見つかりませんでした"}), 400  # ファイルがない場合、エラーを返します
@@ -37,7 +41,7 @@ def upload_audio():
         return jsonify({"error": str(e)}), 500  # 例外が発生した場合、エラーを返します
 
 # 歌詞取得エンドポイント
-@app.route('/lyrics/<song_name>', methods=['GET'])  # '/lyrics/<曲名>'へのGETリクエストを処理する関数を定義します
+@app.route('/api/lyrics/<song_name>', methods=['GET'])  # '/lyrics/<曲名>'へのGETリクエストを処理する関数を定義します
 def get_lyrics(song_name):
     conn = get_db_connection()  # データベースに接続します
     song = conn.execute('SELECT * FROM songs WHERE name = ?', (song_name,)).fetchone()  # 指定された曲名の情報を取得します
@@ -77,7 +81,7 @@ def identify_song(filepath):
 #確認
 @app.route('/')
 def check():
-    return identify_song()
+    return jsonify({"message": "API is running!"}), 200  # APIが正常に動作していることを示すメッセージを返します
 
 if __name__ == '__main__':
     app.run(debug=True)  # アプリケーションをデバッグモードで実行します

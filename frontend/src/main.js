@@ -4,6 +4,10 @@ import App from './App.vue';
 import 'bootstrap/dist/css/bootstrap.min.css'; // BootstrapのCSSをインポート
 import VueRouter from 'vue-router'; // Vue Routerをインポート
 import Vuex from 'vuex'; // Vuexをインポート
+import axios from 'axios'; // axiosをインポート
+
+// axiosのデフォルト値を設定
+axios.defaults.baseURL = 'http://localhost:8000/api'; // バックエンドと通信するためのURLを設定
 
 // Vue RouterとVuexを使用する
 Vue.use(VueRouter);
@@ -11,12 +15,11 @@ Vue.use(Vuex);
 
 // ルーティングの設定（必要に応じてルートを追加）
 const routes = [
-  // ルートを必要に応じて追加
-  // { path: '/', component: Home },
-  // { path: '/about', component: About }
+  { path: '/', component: App },
 ];
 
 const router = new VueRouter({
+  mode: 'history',
   routes // ルートの設定
 });
 

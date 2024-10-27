@@ -25,6 +25,6 @@ pnpm-debug.log*
 # Python
 ../backend/__pycache__/
 ../backend/*.pyc
-../backend/temp_audio.wav
-../backend/cheer_songs.db
+../backend/data/
+../backend/songs.db
 ../backend/venv/
