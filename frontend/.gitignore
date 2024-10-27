@@ -27,3 +27,4 @@ pnpm-debug.log*
 ../backend/*.pyc
 ../backend/temp_audio.wav
 ../backend/cheer_songs.db
+../backend/venv/
